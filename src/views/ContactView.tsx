@@ -12,15 +12,53 @@ export const ContactView: React.FC = () => {
     message: ''
   });
 
-  const [formState, setFormState] = useState<'idle' | 'submitting' | 'success'>('idle');
+  const [formState, setFormState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormState('submitting');
-    setTimeout(() => {
-      setFormState('success');
-    }, 800);
+    setErrorMessage(null);
+
+    const accessKey = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY;
+    if (!accessKey || accessKey === 'YOUR_WEB3FORMS_ACCESS_KEY_HERE') {
+      setFormState('error');
+      setErrorMessage('La clave de Web3Forms (VITE_WEB3FORMS_ACCESS_KEY) no está configurada. Por favor, agrégala en tu archivo .env o en el panel de control de Vercel.');
+      return;
+    }
+
+    try {
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          access_key: accessKey,
+          subject: `Contacto CODISEr: ${formData.service} - ${formData.fullName}`,
+          from_name: 'CODISEr Web',
+          name: formData.fullName,
+          company: formData.company,
+          email: formData.email,
+          phone: formData.phone,
+          service: formData.service,
+          message: formData.message
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setFormState('success');
+      } else {
+        setFormState('error');
+        setErrorMessage(data.message || 'Error del servidor de formularios Web3Forms.');
+      }
+    } catch (err: any) {
+      setFormState('error');
+      setErrorMessage(err.message || 'Error de red. Por favor, comprueba tu conexión a internet.');
+    }
   };
 
   const copyToClipboard = (text: string, field: string) => {
@@ -82,6 +120,12 @@ export const ContactView: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
+                {formState === 'error' && (
+                  <div className="p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg animate-in fade-in">
+                    <p className="font-semibold">Error al enviar el mensaje:</p>
+                    <p className="text-xs mt-1 text-red-700">{errorMessage}</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">

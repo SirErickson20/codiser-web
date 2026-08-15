@@ -22,20 +22,59 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
     message: ''
   });
 
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('submitting');
-    setTimeout(() => {
-      setStatus('success');
-    }, 800);
+    setErrorMessage(null);
+
+    const accessKey = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY;
+    if (!accessKey || accessKey === 'YOUR_WEB3FORMS_ACCESS_KEY_HERE') {
+      setStatus('error');
+      setErrorMessage('La clave de Web3Forms (VITE_WEB3FORMS_ACCESS_KEY) no está configurada. Por favor, agrégala en tu archivo .env o en el panel de control de Vercel.');
+      return;
+    }
+
+    try {
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          access_key: accessKey,
+          subject: `Consulta Estratégica CODISEr: ${formData.service} - ${formData.fullName}`,
+          from_name: 'CODISEr Web',
+          name: formData.fullName,
+          company: formData.company,
+          email: formData.email,
+          phone: formData.phone,
+          service: formData.service,
+          message: formData.message
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setStatus('success');
+      } else {
+        setStatus('error');
+        setErrorMessage(data.message || 'Error del servidor de formularios Web3Forms.');
+      }
+    } catch (err: any) {
+      setStatus('error');
+      setErrorMessage(err.message || 'Error de red. Por favor, comprueba tu conexión a internet.');
+    }
   };
 
   const handleReset = () => {
     setStatus('idle');
+    setErrorMessage(null);
     setFormData({
       fullName: '',
       company: '',
@@ -98,6 +137,12 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {status === 'error' && (
+                <div className="p-3 text-xs text-red-800 bg-red-50 border border-red-200 rounded-lg animate-in fade-in">
+                  <p className="font-semibold">Error al enviar el mensaje:</p>
+                  <p className="mt-0.5 text-red-700">{errorMessage}</p>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
