@@ -1,0 +1,6 @@
+{
+  "name": "CODISER - Servicios Digitales",
+  "description": "Sitio web institucional de CODISER Servicios Digitales. Comunicación estratégica, marketing digital, medios tradicionales y desarrollo de marcas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
